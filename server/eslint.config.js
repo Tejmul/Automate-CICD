@@ -16,6 +16,8 @@ module.exports = [
         console: "readonly",
         __dirname: "readonly",
         __filename: "readonly",
+        fetch: "readonly",
+        URLSearchParams: "readonly",
       },
     },
     plugins: {

@@ -1,5 +1,10 @@
 const express = require('express');
 const cors = require('cors');
+const { errorHandler } = require('./middleware/errorHandler');
+const productsRouter = require('./routes/products');
+const cartRouter = require('./routes/cart');
+const ordersRouter = require('./routes/orders');
+const wishlistRouter = require('./routes/wishlist');
 
 const app = express();
 
@@ -21,6 +26,11 @@ app.use(
 );
 app.use(express.json());
 
+app.use('/api/products', productsRouter);
+app.use('/api/cart', cartRouter);
+app.use('/api/orders', ordersRouter);
+app.use('/api/wishlist', wishlistRouter);
+
 // Health Check Route
 app.get('/api/health', (req, res) => {
   res.json({
@@ -38,5 +48,7 @@ app.get('/api', (req, res) => {
 app.get('/', (req, res) => {
   res.send('ShopSmart Backend Service');
 });
+
+app.use(errorHandler);
 
 module.exports = app;

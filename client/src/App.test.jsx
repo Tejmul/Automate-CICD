@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import App from './App';
 import { describe, it, expect, vi } from 'vitest';
+import { RouterProvider } from 'react-router-dom'
+import { router } from './router'
 
 describe('App', () => {
     it('renders ShopSmart title', () => {
@@ -11,8 +12,7 @@ describe('App', () => {
             })
         );
 
-        render(<App />);
-        const linkElement = screen.getByText(/ShopSmart/i);
-        expect(linkElement).toBeInTheDocument();
+        render(<RouterProvider router={router} />);
+        expect(screen.getByRole('link', { name: /shopsmart/i })).toBeInTheDocument();
     });
 });
