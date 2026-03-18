@@ -4,7 +4,6 @@ const { z } = require('../validation/common');
 const { demoAuth } = require('../middleware/demoAuth');
 const { ensureUserByEmail } = require('../services/users');
 const { prisma } = require('../db/prisma');
-const { getProduct } = require('../services/dummyjson');
 
 const router = express.Router();
 
@@ -74,7 +73,9 @@ router.post(
         return res.status(400).json({ status: 'error', message: 'Cart is empty' });
       }
 
-      const products = await Promise.all(cartItems.map((ci) => getProduct(ci.productId)));
+      const products = await prisma.product.findMany({
+        where: { id: { in: cartItems.map((ci) => ci.productId) } },
+      });
 
       const order = await prisma.$transaction(async (tx) => {
         const created = await tx.order.create({
@@ -86,8 +87,8 @@ router.post(
                 const p = products.find((x) => x.id === ci.productId);
                 return {
                   productId: ci.productId,
-                  title: p ? p.title : `Product ${ci.productId}`,
-                  price: p ? Number(p.price) : 0,
+                  title: p ? p.name : `Product ${ci.productId}`,
+                  price: p ? Number(p.priceCents) / 100 : 0,
                   quantity: ci.quantity,
                 };
               }),

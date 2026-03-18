@@ -6,12 +6,13 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest",
+    "test": "prisma migrate deploy && jest",
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy"
+    "prisma:migrate": "prisma migrate deploy",
+    "catalog:sync": "node src/scripts/syncCatalog.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",

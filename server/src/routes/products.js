@@ -1,7 +1,7 @@
 const express = require('express');
 const { validate } = require('../middleware/validate');
 const { z, zProductId } = require('../validation/common');
-const { listProducts, listCategories, listProductsByCategory, getProduct } = require('../services/dummyjson');
+const { listProducts, listCategories, getProduct } = require('../services/catalog');
 
 const router = express.Router();
 
@@ -31,7 +31,7 @@ router.get(
     try {
       const { limit, skip } = req.validated.query;
       const category = req.validated.params.category;
-      const data = await listProductsByCategory({ category, limit, skip });
+      const data = await listProducts({ category, limit, skip });
       res.json(data);
     } catch (e) {
       next(e);
@@ -73,6 +73,7 @@ router.get(
   async (req, res, next) => {
     try {
       const product = await getProduct(req.validated.params.id);
+      if (!product) return res.status(404).json({ status: 'error', message: 'Product not found' });
       res.json(product);
     } catch (e) {
       next(e);

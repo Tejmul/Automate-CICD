@@ -24,9 +24,15 @@ export function TopNav() {
 
                 <nav className="nav">
                     <NavItem to="/">Home</NavItem>
+                    <NavItem to="/shop">Shop</NavItem>
+                    <NavItem to="/wishlist">Wishlist</NavItem>
+                    <NavItem to="/orders">Orders</NavItem>
                 </nav>
 
                 <div className="topnav__right">
+                    <Link className="pill" to="/cart">
+                        Cart
+                    </Link>
                     <a className="pill" href="/api/health" target="_blank" rel="noreferrer">
                         API
                     </a>

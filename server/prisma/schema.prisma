@@ -66,6 +66,24 @@ model WishlistItem {
   @@unique([userId, productId])
 }
 
+model Product {
+  id          Int      @id
+  name        String
+  description String
+  image       String
+  priceCents  Int
+  category    String
+  subCategory String
+  keywords    String
+  ratingStars Float
+  ratingCount Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([subCategory])
+}
+
 enum OrderStatus {
   PENDING
   PAID
