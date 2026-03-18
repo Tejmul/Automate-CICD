@@ -1,5 +1,5 @@
-const PRODUCTS_URL = 'https://kolzsticks.github.io/Free-Ecommerce-Products-Api/main/products.json';
 const { prisma } = require('../db/prisma');
+const { listAllProducts } = require('./dummyjson');
 
 function normalizeProduct(p) {
   const id = Number(p.id);
@@ -7,31 +7,24 @@ function normalizeProduct(p) {
 
   return {
     id,
-    name: String(p.name || '').trim(),
+    title: String(p.title || '').trim(),
     description: String(p.description || '').trim(),
-    image: String(p.image || '').trim(),
-    priceCents: Number(p.priceCents) || 0,
+    price: Number(p.price) || 0,
+    discountPercentage: Number(p.discountPercentage) || 0,
+    rating: Number(p.rating) || 0,
+    stock: Number(p.stock) || 0,
+    brand: String(p.brand || '').trim(),
+    thumbnail: String(p.thumbnail || '').trim(),
+    images: JSON.stringify(Array.isArray(p.images) ? p.images : []),
     category: String(p.category || '').trim(),
-    subCategory: String(p.subCategory || '').trim(),
-    keywords: Array.isArray(p.keywords) ? p.keywords.join(',') : String(p.keywords || ''),
-    ratingStars: Number(p.rating?.stars) || 0,
-    ratingCount: Number(p.rating?.count) || 0,
+    tags: JSON.stringify(Array.isArray(p.tags) ? p.tags : []),
   };
 }
 
 async function syncProductsFromRemote() {
-  const res = await fetch(PRODUCTS_URL, { headers: { accept: 'application/json' } });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    const err = new Error(`Products fetch failed: ${res.status} ${res.statusText}`);
-    err.statusCode = res.status;
-    err.details = text;
-    throw err;
-  }
-
-  const raw = await res.json();
-  const items = Array.isArray(raw) ? raw : [];
-  const normalized = items.map(normalizeProduct).filter((p) => p.name);
+  const data = await listAllProducts();
+  const items = Array.isArray(data.products) ? data.products : [];
+  const normalized = items.map(normalizeProduct).filter((p) => p.title);
 
   await prisma.$transaction(
     normalized.map((p) =>
@@ -60,13 +53,13 @@ async function listProducts({ q, limit = 24, skip = 0, category } = {}) {
     ...(category ? { category } : {}),
     ...(q
       ? {
-          OR: [
-            { name: { contains: q } },
-            { description: { contains: q } },
-            { category: { contains: q } },
-            { subCategory: { contains: q } },
-          ],
-        }
+        OR: [
+          { title: { contains: q } },
+          { description: { contains: q } },
+          { category: { contains: q } },
+          { brand: { contains: q } },
+        ],
+      }
       : {}),
   };
 
@@ -80,13 +73,34 @@ async function listProducts({ q, limit = 24, skip = 0, category } = {}) {
     }),
   ]);
 
-  return { products, total, skip, limit };
+  return {
+    products: products.map(enrichProduct),
+    total,
+    skip,
+    limit,
+  };
 }
 
 async function getProduct(id) {
   const product = await prisma.product.findUnique({ where: { id } });
-  return product;
+  return product ? enrichProduct(product) : null;
+}
+
+/** Parse JSON string fields back to arrays for the API response */
+function enrichProduct(p) {
+  return {
+    ...p,
+    images: safeParse(p.images),
+    tags: safeParse(p.tags),
+  };
+}
+
+function safeParse(str) {
+  try {
+    return JSON.parse(str);
+  } catch {
+    return [];
+  }
 }
 
 module.exports = { syncProductsFromRemote, listCategories, listProducts, getProduct };
-

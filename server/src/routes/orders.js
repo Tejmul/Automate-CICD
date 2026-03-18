@@ -87,8 +87,8 @@ router.post(
                 const p = products.find((x) => x.id === ci.productId);
                 return {
                   productId: ci.productId,
-                  title: p ? p.name : `Product ${ci.productId}`,
-                  price: p ? Number(p.priceCents) / 100 : 0,
+                  title: p ? p.title : `Product ${ci.productId}`,
+                  price: p ? Number(p.price) : 0,
                   quantity: ci.quantity,
                 };
               }),

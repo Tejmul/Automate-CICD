@@ -67,21 +67,23 @@ model WishlistItem {
 }
 
 model Product {
-  id          Int      @id
-  name        String
-  description String
-  image       String
-  priceCents  Int
-  category    String
-  subCategory String
-  keywords    String
-  ratingStars Float
-  ratingCount Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 Int      @id
+  title              String
+  description        String   @default("")
+  price              Float
+  discountPercentage Float    @default(0)
+  rating             Float    @default(0)
+  stock              Int      @default(0)
+  brand              String   @default("")
+  thumbnail          String   @default("")
+  images             String   @default("[]")
+  category           String
+  tags               String   @default("[]")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([category])
-  @@index([subCategory])
+  @@index([brand])
 }
 
 enum OrderStatus {
@@ -90,4 +92,3 @@ enum OrderStatus {
   SHIPPED
   CANCELLED
 }
-
