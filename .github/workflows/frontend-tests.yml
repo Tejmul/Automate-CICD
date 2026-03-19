@@ -1,0 +1,85 @@
+name: Frontend Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  frontend-tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./client
+
+    steps:
+      # Setup
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json
+
+      # Install
+      - name: Install Dependencies
+        run: npm ci
+
+      # Code Quality
+      - name: Lint
+        run: npm run lint
+
+      - name: Format Check
+        run: npm run format:check
+
+      # Unit & Integration Tests (Vitest)
+      - name: Run Tests (Vitest)
+        run: npx vitest run
+
+      # Build
+      - name: Build
+        run: npm run build
+
+      # E2E Tests (Playwright)
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Server Dependencies
+        working-directory: ./server
+        run: npm ci
+
+      - name: Start Server for E2E
+        working-directory: ./server
+        run: |
+          npm run dev &
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            curl -fsS "http://localhost:5001/api/health" && break
+            sleep 1
+          done
+        env:
+          NODE_ENV: test
+          PORT: 5001
+          DATABASE_URL: file:./dev.db
+          ALLOWED_ORIGINS: http://localhost:5173
+
+      - name: Run E2E Tests (Playwright)
+        env:
+          CI: true
+          E2E_BASE_URL: http://localhost:5173
+        run: npm run e2e
+
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: client/playwright-report/
+          retention-days: 7

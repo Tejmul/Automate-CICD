@@ -4,69 +4,57 @@ import { useProducts } from '../hooks/useStorefront'
 export function Hero() {
     const { data } = useProducts({ limit: 6 })
     const featured = data?.products?.slice(0, 3) || []
+    const primary = featured[0]
+
+    const pickHeroImage = (p, idx = 0) => {
+        const images = Array.isArray(p?.images) ? p.images : []
+        return images[idx] || images[0] || p?.thumbnail || ''
+    }
 
     return (
-        <section className="hero">
-            <div className="hero__bg">
-                <div className="hero__grid" />
-                <div className="hero__orb hero__orb--1" />
-                <div className="hero__orb hero__orb--2" />
-            </div>
-
-            <div className="container hero__inner">
-                <div className="hero__content">
-                    <div className="badge-gold animate-fade-up" style={{ marginBottom: 32 }}>
-                        <span style={{ marginRight: 6 }}>✦</span> Premium Collection · 2025
-                    </div>
-
-                    <h1 className="display-xl hero__headline animate-fade-up animate-fade-up-delay-1">
-                        Shop<br />
-                        <em style={{ fontStyle: 'italic', color: 'var(--ivory-dim)' }}>smarter.</em>
+        <section className="hero2">
+            <div className="container hero2__inner">
+                <div className="hero2__left">
+                    <div className="hero2__kicker">ShopSmart</div>
+                    <h1 className="hero2__title">
+                        Unleash Your Style
+                        <br />
+                        Shop the Latest Trends
                     </h1>
-
-                    <p className="hero__sub animate-fade-up animate-fade-up-delay-2">
-                        Curated goods with lightning search,<br />
-                        real-time inventory, seamless checkout.
+                    <p className="hero2__sub">
+                        Discover the latest trends &amp; express your style effortlessly. Shop exclusive collections with
+                        premium designs, just for you!
                     </p>
-
-                    <div className="hero__actions animate-fade-up animate-fade-up-delay-3">
-                        <Link to="/shop" className="btn-primary">
-                            Explore Collection
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                                <path d="M5 12h14M12 5l7 7-7 7" />
-                            </svg>
+                    <div className="hero2__actions">
+                        <Link to="/shop" className="btn-primary hero2__cta">
+                            Shop Now
                         </Link>
-                        <Link to="/wishlist" className="btn-outline">Saved Items</Link>
                     </div>
 
-                    <div className="hero__stats animate-fade-up animate-fade-up-delay-4">
-                        {[['194', 'Products'], ['22', 'Categories'], ['4.8★', 'Avg Rating']].map(([n, l]) => (
-                            <div key={l} className="hero__stat">
-                                <span className="hero__stat-n">{n}</span>
-                                <span className="hero__stat-l">{l}</span>
-                            </div>
-                        ))}
+                    <div className="hero2__reviews">
+                        <div className="hero2__reviewsStat">15 Million+</div>
+                        <div className="hero2__reviewsText">
+                            Real reviews from our happy customers! See what fashion lovers are saying about our quality,
+                            style, and service.
+                        </div>
                     </div>
                 </div>
 
-                <div className="hero__visual animate-fade-up animate-fade-up-delay-2">
-                    {featured.slice(0, 3).map((p, i) => (
-                        <Link key={p.id} to={`/product/${p.id}`} className={`hero__card hero__card--${i}`}>
-                            <div className="hero__card-img">
-                                <img src={p.thumbnail} alt={p.title} />
-                            </div>
-                            <div className="hero__card-info">
-                                <span className="hero__card-name">{p.title}</span>
-                                <span className="hero__card-price">${p.price.toFixed(2)}</span>
-                            </div>
-                        </Link>
-                    ))}
+                <div className="hero2__right" aria-hidden="true">
+                    <div className="hero2__frame">
+                        <div className="hero2__img hero2__img--single">
+                            {primary ? (
+                                <img src={pickHeroImage(primary, 0)} alt="" loading="eager" />
+                            ) : (
+                                <div className="hero2__ph hero2__ph--gradient" />
+                            )}
+                        </div>
+                    </div>
+                    <div className="hero2__caption">
+                        <div className="hero2__capTitle">Models wearing full outfits</div>
+                        <div className="hero2__capCta">Explore now</div>
+                    </div>
                 </div>
-            </div>
-
-            <div className="hero__scroll-hint">
-                <div className="hero__scroll-line" />
-                <span>Scroll</span>
             </div>
         </section>
     )

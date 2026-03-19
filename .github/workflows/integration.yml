@@ -1,0 +1,69 @@
+name: Integration
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+
+      # SERVER
+      - name: Install Server Dependencies
+        working-directory: ./server
+        run: npm ci
+
+      - name: Run Server Lint
+        working-directory: ./server
+        run: npm run lint
+
+      - name: Run Server Format Check
+        working-directory: ./server
+        run: npm run format:check
+
+      - name: Run Server Tests
+        working-directory: ./server
+        run: npm run test
+
+      # CLIENT
+      - name: Install Client Dependencies
+        working-directory: ./client
+        run: npm ci
+
+      - name: Run Client Lint
+        working-directory: ./client
+        run: npm run lint
+
+      - name: Run Client Format Check
+        working-directory: ./client
+        run: npm run format:check
+
+      - name: Run Client Tests
+        working-directory: ./client
+        run: npx vitest run
+
+      - name: Build Client
+        working-directory: ./client
+        run: npm run build

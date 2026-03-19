@@ -1,12 +1,11 @@
 import { Link } from 'react-router-dom'
 import { Hero } from '../sections/Hero'
-import { useProducts, useCategories, useCartActions, useWishlist, useWishlistActions } from '../hooks/useStorefront'
+import { useProducts, useCartActions, useWishlist, useWishlistActions } from '../hooks/useStorefront'
 import { ProductCard } from '../components/ProductCard'
 import { Skeleton } from '../components/State'
 import { useMemo } from 'react'
 
 export function HomePage() {
-    const { data: categoriesData = [] } = useCategories()
     const { data: featuredData, isLoading: featuredLoading } = useProducts({ limit: 8 })
     const featuredProducts = featuredData?.products || []
 
@@ -63,41 +62,6 @@ export function HomePage() {
                     </div>
                 )}
             </section>
-
-            {/* Categories */}
-            {categoriesData.length > 0 && (
-                <section className="home-section">
-                    <div className="home-section__head">
-                        <h2 className="home-section__title">Shop by Category</h2>
-                        <Link className="home-section__link" to="/shop">Browse All →</Link>
-                    </div>
-                    <div className="category-grid">
-                        {categoriesData.slice(0, 8).map((cat) => (
-                            <Link key={cat} to={`/shop?category=${encodeURIComponent(cat)}`} className="category-card">
-                                <div className="category-card__name">{cat}</div>
-                            </Link>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {/* CTA */}
-            <div className="homecta">
-                <div className="panel homecta__panel">
-                    <div className="panel__title">Ready to start?</div>
-                    <div className="muted">
-                        Browse the catalog, discover products, add them to your cart, and experience seamless checkout.
-                    </div>
-                    <div className="homecta__actions">
-                        <Link className="btn btn--primary" to="/shop">
-                            Explore Collection
-                        </Link>
-                        <Link className="btn btn--ghost" to="/cart">
-                            View Cart
-                        </Link>
-                    </div>
-                </div>
-            </div>
         </div>
     )
 }
