@@ -1,18 +1,17 @@
-export function formatMoney(value, { currency = 'USD' } = {}) {
-    const number = Number(value)
-    const safe = Number.isFinite(number) ? number : 0
-    try {
-        return new Intl.NumberFormat(undefined, {
-            style: 'currency',
-            currency,
-            maximumFractionDigits: 0,
-        }).format(safe)
-    } catch {
-        return `$${safe.toFixed(0)}`
-    }
-}
+export function Price({ value, originalValue, discountPercentage, large, className = '' }) {
+    const fmt = (v) => `$${Number(v).toFixed(2)}`
 
-export function Price({ value, currency }) {
-    return <span className="price">{formatMoney(value, { currency })}</span>
-}
+    const hasDiscount = discountPercentage > 0 && originalValue && originalValue !== value
 
+    return (
+        <span className={`price ${large ? 'price--large' : ''} ${className}`}>
+            {hasDiscount && (
+                <span className="price__original">{fmt(originalValue)}</span>
+            )}
+            {fmt(value)}
+            {hasDiscount && (
+                <span className="price__discount">-{Math.round(discountPercentage)}%</span>
+            )}
+        </span>
+    )
+}

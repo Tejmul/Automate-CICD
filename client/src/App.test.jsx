@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { RouterProvider } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { router } from './router'
 
 describe('App', () => {
@@ -12,7 +13,15 @@ describe('App', () => {
             })
         );
 
-        render(<RouterProvider router={router} />);
+        const queryClient = new QueryClient({
+            defaultOptions: { queries: { retry: 0 }, mutations: { retry: 0 } }
+        })
+
+        render(
+            <QueryClientProvider client={queryClient}>
+                <RouterProvider router={router} />
+            </QueryClientProvider>
+        );
         expect(screen.getByRole('link', { name: /shopsmart/i })).toBeInTheDocument();
     });
 });

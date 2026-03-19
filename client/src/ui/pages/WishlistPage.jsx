@@ -1,25 +1,33 @@
+import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { useWishlistActions, useWishlistWithProducts } from '../hooks/useStorefront'
+import { useWishlistWithProducts, useWishlistActions, useCartActions } from '../hooks/useStorefront'
 import { EmptyState, InlineError, Skeleton } from '../components/State'
-import { ProductCard } from '../components/ProductCard'
+import { Price } from '../components/Price'
 
 export function WishlistPage() {
     const { products, productIds, isLoading, error } = useWishlistWithProducts()
-    const actions = useWishlistActions()
-
-    if (error) return <InlineError title="Couldn’t load wishlist" message={error.message} />
+    const wishActions = useWishlistActions()
+    const cartActions = useCartActions()
 
     return (
-        <div className="wishlist">
+        <div className="page">
             <div className="wishlist__top">
-                <div className="pagekicker">Wishlist</div>
-                <h2 className="pagetitle">Save it now. Decide later.</h2>
-                <p className="pagesub">Fast, simple, and synced to the backend.</p>
+                <div>
+                    <div className="pagekicker">Wishlist</div>
+                    <h2 className="pagetitle">Your Saved Items</h2>
+                    <p className="pagesub">
+                        {productIds.size > 0
+                            ? `${productIds.size} saved item${productIds.size > 1 ? 's' : ''}`
+                            : 'Nothing saved yet'}
+                    </p>
+                </div>
             </div>
 
-            {isLoading ? (
-                <div className="grid">
-                    {Array.from({ length: 8 }).map((_, i) => (
+            {error ? (
+                <InlineError title="Couldn't load wishlist" message={error.message} />
+            ) : isLoading ? (
+                <div className="grid" style={{ marginTop: 18 }}>
+                    {Array.from({ length: 4 }).map((_, i) => (
                         <div key={i} className="pcard pcard--skel">
                             <div className="pcard__media">
                                 <div className="pcard__img pcard__img--ph" />
@@ -33,48 +41,69 @@ export function WishlistPage() {
                 </div>
             ) : products.length === 0 ? (
                 <EmptyState
-                    title="No wishlist items"
-                    message="Tap ‘Add to wishlist’ on any product."
+                    icon="♡"
+                    title="No saved items"
+                    message="Heart products while browsing to save them here."
                     action={
                         <Link className="btn btn--primary" to="/shop">
-                            Browse products
+                            Browse Products
                         </Link>
                     }
                 />
             ) : (
-                <>
-                    <div className="chips chips--muted">
-                        <span className="muted">{products.length} items</span>
-                        <span className="muted">·</span>
-                        <button
-                            className="linkbtn"
-                            type="button"
-                            disabled={actions.remove.isPending}
-                            onClick={() => {
-                                for (const id of productIds) actions.remove.mutate(id)
-                            }}
-                        >
-                            Remove all
-                        </button>
-                    </div>
-                    <div className="grid">
-                        {products.map((p) => (
-                            <div key={p.id} className="wishcard">
-                                <ProductCard product={p} />
-                                <button
-                                    className="wishcard__x"
-                                    type="button"
-                                    onClick={() => actions.remove.mutate(p.id)}
-                                    aria-label="Remove from wishlist"
-                                >
-                                    ×
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </>
+                <div className="grid" style={{ marginTop: 18 }}>
+                    {products.map((p) => (
+                        <div key={p.id} className="pcard wishcard">
+                            <button
+                                className="wishcard__x"
+                                onClick={() => wishActions.remove.mutate(p.id)}
+                                aria-label="Remove from wishlist"
+                            >
+                                ✕
+                            </button>
+
+                            <Link to={`/product/${p.id}`}>
+                                <div className="pcard__media">
+                                    {p.thumbnail ? (
+                                        <img className="pcard__img" src={p.thumbnail} alt={p.title} loading="lazy" />
+                                    ) : (
+                                        <div className="pcard__img pcard__img--ph" aria-hidden="true" />
+                                    )}
+
+                                    <div className="pcard__overlay">
+                                        <div className="pcard__quick-actions">
+                                            <button
+                                                className="pcard__quick-btn"
+                                                onClick={(e) => {
+                                                    e.preventDefault()
+                                                    e.stopPropagation()
+                                                    cartActions.add.mutate({ productId: p.id, quantity: 1 })
+                                                }}
+                                            >
+                                                Move to Cart
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Link>
+
+                            <Link to={`/product/${p.id}`} className="pcard__body">
+                                {p.brand && <div className="pcard__brand">{p.brand}</div>}
+                                <div className="pcard__title">{p.title}</div>
+                                <div className="pcard__meta">
+                                    <Price value={p.price} />
+                                    {typeof p.rating === 'number' && p.rating > 0 && (
+                                        <>
+                                            <span className="dot" aria-hidden="true">·</span>
+                                            <span className="pcard__rating">★ {p.rating.toFixed(1)}</span>
+                                        </>
+                                    )}
+                                </div>
+                            </Link>
+                        </div>
+                    ))}
+                </div>
             )}
         </div>
     )
 }
-

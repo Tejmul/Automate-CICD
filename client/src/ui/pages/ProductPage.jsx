@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useCartActions, useProduct, useWishlist, useWishlistActions } from '../hooks/useStorefront'
 import { InlineError, Skeleton } from '../components/State'
@@ -14,16 +14,26 @@ export function ProductPage() {
     const wishActions = useWishlistActions()
     const cartActions = useCartActions()
 
+    const [selectedImg, setSelectedImg] = useState(0)
+
     if (error) {
         return (
-            <div className="pdp">
-                <InlineError title="Couldn’t load product" message={error.message} />
+            <div className="page pdp">
+                <InlineError title="Couldn't load product" message={error.message} />
             </div>
         )
     }
 
+    const images = product?.images || []
+    const currentImg = images[selectedImg] || product?.thumbnail
+    const hasDiscount = product?.discountPercentage > 0
+    const originalPrice = hasDiscount
+        ? product.price / (1 - product.discountPercentage / 100)
+        : null
+    const tags = product?.tags || []
+
     return (
-        <div className="pdp">
+        <div className="page pdp">
             <div className="pdp__crumbs">
                 <Link className="crumb" to="/shop">
                     ← Back to shop
@@ -46,42 +56,81 @@ export function ProductPage() {
                     <div className="pdp__media">
                         <img
                             className="pdp__img"
-                            src={product.image}
-                            alt={product.name}
+                            src={currentImg}
+                            alt={product.title}
                         />
+                        {images.length > 1 && (
+                            <div className="pdp__thumbs">
+                                {images.map((img, i) => (
+                                    <img
+                                        key={i}
+                                        className={`pdp__thumb ${i === selectedImg ? 'pdp__thumb--active' : ''}`}
+                                        src={img}
+                                        alt={`${product.title} view ${i + 1}`}
+                                        onClick={() => setSelectedImg(i)}
+                                        loading="lazy"
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="pdp__info">
                         <div className="pdp__kicker">{product.category}</div>
-                        <h2 className="pdp__title">{product.name}</h2>
+                        <h2 className="pdp__title">{product.title}</h2>
+
                         <div className="pdp__meta">
-                            <Price value={Number(product.priceCents) / 100} />
-                            <span className="dot" aria-hidden="true">
-                                ·
-                            </span>
-                            <span className="muted">{product.subCategory}</span>
-                            {typeof product.ratingStars === 'number' ? (
+                            {product.brand && (
                                 <>
-                                    <span className="dot" aria-hidden="true">
-                                        ·
-                                    </span>
-                                    <span className="muted">
-                                        {product.ratingStars.toFixed(1)} ({product.ratingCount})
-                                    </span>
+                                    <span className="pdp__brand">{product.brand}</span>
+                                    <span className="dot" aria-hidden="true">·</span>
                                 </>
-                            ) : null}
+                            )}
+                            {typeof product.rating === 'number' && product.rating > 0 && (
+                                <>
+                                    <span className="pdp__rating">
+                                        ★ {product.rating.toFixed(1)}
+                                    </span>
+                                    <span className="dot" aria-hidden="true">·</span>
+                                </>
+                            )}
+                            <span className={`pdp__stock ${product.stock > 0 ? 'pdp__stock--in' : 'pdp__stock--out'}`}>
+                                {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+                            </span>
+                        </div>
+
+                        <div className="pdp__price-block">
+                            <Price
+                                value={product.price}
+                                originalValue={originalPrice}
+                                discountPercentage={product.discountPercentage}
+                                large
+                            />
+                            {hasDiscount && (
+                                <span className="pdp__discount-badge">
+                                    Save {Math.round(product.discountPercentage)}%
+                                </span>
+                            )}
                         </div>
 
                         <p className="pdp__desc">{product.description}</p>
+
+                        {tags.length > 0 && (
+                            <div className="pdp__tags">
+                                {tags.map((tag) => (
+                                    <span key={tag} className="pdp__tag">#{tag}</span>
+                                ))}
+                            </div>
+                        )}
 
                         <div className="pdp__actions">
                             <button
                                 className="btn btn--primary"
                                 type="button"
-                                disabled={cartActions.add.isPending}
+                                disabled={cartActions.add.isPending || product.stock === 0}
                                 onClick={() => cartActions.add.mutate({ productId: product.id, quantity: 1 })}
                             >
-                                {cartActions.add.isPending ? 'Adding…' : 'Add to cart'}
+                                {cartActions.add.isPending ? 'Adding…' : product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
                             </button>
 
                             <button
@@ -93,7 +142,7 @@ export function ProductPage() {
                                     else wishActions.add.mutate(product.id)
                                 }}
                             >
-                                {wishlistSet.has(product.id) ? 'Wishlisted' : 'Add to wishlist'}
+                                {wishlistSet.has(product.id) ? '♥ Wishlisted' : '♡ Add to Wishlist'}
                             </button>
                         </div>
 
@@ -113,4 +162,3 @@ export function ProductPage() {
         </div>
     )
 }
-

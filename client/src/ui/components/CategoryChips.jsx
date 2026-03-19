@@ -1,24 +1,23 @@
 export function CategoryChips({ categories, value, onChange }) {
     return (
-        <div className="chips" role="tablist" aria-label="Categories">
+        <div className="chips">
             <button
+                className={`chip ${value === null ? 'chip--active' : ''}`}
                 type="button"
-                className={value ? 'chip' : 'chip chip--active'}
-                onClick={() => onChange?.(null)}
+                onClick={() => onChange(null)}
             >
                 All
             </button>
-            {categories.map((c) => (
+            {categories.map((cat) => (
                 <button
-                    key={c}
+                    key={cat}
+                    className={`chip ${value === cat ? 'chip--active' : ''}`}
                     type="button"
-                    className={value === c ? 'chip chip--active' : 'chip'}
-                    onClick={() => onChange?.(c)}
+                    onClick={() => onChange(cat === value ? null : cat)}
                 >
-                    {String(c).replace(/-/g, ' ')}
+                    {cat}
                 </button>
             ))}
         </div>
     )
 }
-

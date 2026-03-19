@@ -1,14 +1,15 @@
 import { Outlet } from 'react-router-dom'
-import { TopNav } from './TopNav'
+import { Navbar } from './Navbar'
+import { Footer } from '../components/Footer'
 
 export function AppShell() {
     return (
-        <div className="app">
-            <TopNav />
-            <main className="main">
+        <div>
+            <Navbar />
+            <main style={{ paddingTop: 72 }}>
                 <Outlet />
             </main>
+            <Footer />
         </div>
     )
 }
-

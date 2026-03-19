@@ -54,7 +54,7 @@ export function useCartWithProducts() {
     const lines =
         cart.data?.map((it) => {
             const p = productsById.get(it.productId)
-            const unitPrice = (p?.priceCents ?? 0) / 100
+            const unitPrice = p?.price ?? 0
             return {
                 ...it,
                 product: p,
@@ -64,7 +64,6 @@ export function useCartWithProducts() {
         }) || []
 
     const subtotal = lines.reduce((sum, l) => sum + (Number.isFinite(l.lineTotal) ? l.lineTotal : 0), 0)
-
     const isLoading = cart.isLoading || productQueries.some((q) => q.isLoading)
     const error = cart.error || productQueries.find((q) => q.error)?.error
 
@@ -156,4 +155,3 @@ export function useCheckout() {
         },
     })
 }
-

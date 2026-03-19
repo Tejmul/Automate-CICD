@@ -5,6 +5,26 @@ export const api = {
         return apiFetch('/api/health')
     },
 
+    auth: {
+        login({ username, password }) {
+            return apiFetch('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ username, password }),
+            })
+        },
+        refresh(refreshToken) {
+            return apiFetch('/api/auth/refresh', {
+                method: 'POST',
+                body: JSON.stringify({ refreshToken }),
+            })
+        },
+        me(accessToken) {
+            return apiFetch('/api/auth/me', {
+                headers: { Authorization: `Bearer ${accessToken}` },
+            })
+        },
+    },
+
     products: {
         list({ q, limit = 24, skip = 0 } = {}) {
             const params = new URLSearchParams()
@@ -90,4 +110,3 @@ export const api = {
         },
     },
 }
-

@@ -1,153 +1,177 @@
 import { Link } from 'react-router-dom'
-import { useCartActions, useCartWithProducts, useCheckout } from '../hooks/useStorefront'
-import { EmptyState, InlineError, Skeleton } from '../components/State'
-import { Price, formatMoney } from '../components/Price'
-
-function CartRow({ line }) {
-    const product = line.product
-    const actions = useCartActions()
-
-    return (
-        <div className="cartrow">
-            <div className="cartrow__media">
-                {!product ? (
-                    <div className="cartrow__img cartrow__img--ph" />
-                ) : (
-                    <img className="cartrow__img" src={product.image} alt={product.name} loading="lazy" />
-                )}
-            </div>
-            <div className="cartrow__body">
-                <div className="cartrow__title">{product?.name || `Product #${line.productId}`}</div>
-                <div className="cartrow__meta">
-                    {product ? <Price value={Number(product.priceCents) / 100} /> : <Skeleton className="skel--price" />}
-                    <span className="dot" aria-hidden="true">
-                        ·
-                    </span>
-                    <span className="muted">Qty</span>
-                    <div className="qty">
-                        <button
-                            className="qty__btn"
-                            type="button"
-                            onClick={() =>
-                                actions.setQuantity.mutate({
-                                    productId: line.productId,
-                                    quantity: Math.max(1, line.quantity - 1),
-                                })
-                            }
-                            aria-label="Decrease quantity"
-                        >
-                            −
-                        </button>
-                        <div className="qty__val">{line.quantity}</div>
-                        <button
-                            className="qty__btn"
-                            type="button"
-                            onClick={() =>
-                                actions.setQuantity.mutate({
-                                    productId: line.productId,
-                                    quantity: Math.min(99, line.quantity + 1),
-                                })
-                            }
-                            aria-label="Increase quantity"
-                        >
-                            +
-                        </button>
-                    </div>
-                    <button
-                        className="linkbtn"
-                        type="button"
-                        onClick={() => actions.remove.mutate(line.productId)}
-                    >
-                        Remove
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
-}
+import { useCartWithProducts, useCartActions, useCheckout } from '../hooks/useStorefront'
+import { InlineError, EmptyState, Skeleton } from '../components/State'
+import { Price } from '../components/Price'
 
 export function CartPage() {
     const { lines, subtotal, isLoading, error } = useCartWithProducts()
+    const cartActions = useCartActions()
     const checkout = useCheckout()
-    const actions = useCartActions()
-
-    if (error) return <InlineError title="Couldn’t load cart" message={error.message} />
 
     return (
-        <div className="cart">
+        <div className="page">
             <div className="cart__top">
-                <div className="pagekicker">Cart</div>
-                <h2 className="pagetitle">Mobile-first checkout, zero fluff.</h2>
-                <p className="pagesub">Your cart items are stored in the backend (SQLite + Prisma).</p>
+                <div>
+                    <div className="pagekicker">Cart</div>
+                    <h2 className="pagetitle">Your Shopping Bag</h2>
+                    <p className="pagesub">
+                        {lines.length > 0
+                            ? `${lines.length} item${lines.length > 1 ? 's' : ''} in your cart`
+                            : 'Your cart is empty'}
+                    </p>
+                </div>
             </div>
 
-            {isLoading ? (
-                <div className="panel">
-                    <Skeleton className="skel--line" />
-                    <Skeleton className="skel--line skel--line2" />
+            {error ? (
+                <InlineError title="Couldn't load cart" message={error.message} />
+            ) : isLoading ? (
+                <div className="cart__grid">
+                    <div>
+                        {Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="cartrow">
+                                <div className="cartrow__img cartrow__img--ph" />
+                                <div>
+                                    <Skeleton className="skel--line" />
+                                    <Skeleton className="skel--line skel--line2" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div />
                 </div>
             ) : lines.length === 0 ? (
                 <EmptyState
+                    icon="🛒"
                     title="Your cart is empty"
-                    message="Go pick something that feels like a drop."
+                    message="Start adding products to fill your shopping bag."
                     action={
                         <Link className="btn btn--primary" to="/shop">
-                            Shop now
+                            Start Shopping
                         </Link>
                     }
                 />
             ) : (
                 <div className="cart__grid">
-                    <div className="panel">
-                        <div className="panel__head">
-                            <div className="panel__title">Items</div>
-                            <button
-                                className="linkbtn"
-                                type="button"
-                                disabled={actions.clear.isPending}
-                                onClick={() => actions.clear.mutate()}
-                            >
-                                Clear
-                            </button>
-                        </div>
-                        <div className="cart__list">
-                            {lines.map((line) => (
-                                <CartRow key={line.productId} line={line} />
-                            ))}
-                        </div>
+                    <div>
+                        {lines.map((line) => (
+                            <div key={line.productId} className="cartrow">
+                                {line.product?.thumbnail ? (
+                                    <img
+                                        className="cartrow__img"
+                                        src={line.product.thumbnail}
+                                        alt={line.product?.title || ''}
+                                    />
+                                ) : (
+                                    <div className="cartrow__img cartrow__img--ph" />
+                                )}
+
+                                <div>
+                                    <Link to={`/product/${line.productId}`} className="cartrow__title">
+                                        {line.product?.title || `Product #${line.productId}`}
+                                    </Link>
+                                    <div className="cartrow__meta">
+                                        <Price value={line.unitPrice} />
+                                        <span className="dot" aria-hidden="true">·</span>
+
+                                        <div className="qty">
+                                            <button
+                                                className="qty__btn"
+                                                type="button"
+                                                disabled={line.quantity <= 1 || cartActions.setQuantity.isPending}
+                                                onClick={() =>
+                                                    cartActions.setQuantity.mutate({
+                                                        productId: line.productId,
+                                                        quantity: line.quantity - 1,
+                                                    })
+                                                }
+                                            >
+                                                −
+                                            </button>
+                                            <span className="qty__val">{line.quantity}</span>
+                                            <button
+                                                className="qty__btn"
+                                                type="button"
+                                                disabled={cartActions.setQuantity.isPending}
+                                                onClick={() =>
+                                                    cartActions.setQuantity.mutate({
+                                                        productId: line.productId,
+                                                        quantity: line.quantity + 1,
+                                                    })
+                                                }
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+
+                                        <span className="dot" aria-hidden="true">·</span>
+                                        <Price value={line.lineTotal} />
+
+                                        <button
+                                            className="linkbtn"
+                                            type="button"
+                                            onClick={() => cartActions.remove.mutate(line.productId)}
+                                        >
+                                            Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
 
                     <div className="panel panel--sticky">
-                        <div className="panel__title">Summary</div>
+                        <div className="panel__title">Order Summary</div>
                         <div className="summary">
                             <div className="summary__row">
                                 <span className="muted">Subtotal</span>
-                                <span>{formatMoney(subtotal)}</span>
+                                <Price value={subtotal} />
                             </div>
                             <div className="summary__row">
                                 <span className="muted">Shipping</span>
-                                <span className="muted">Calculated at checkout</span>
+                                <span className="muted">Free</span>
                             </div>
                             <div className="summary__row summary__row--total">
                                 <span>Total</span>
-                                <span>{formatMoney(subtotal)}</span>
+                                <Price value={subtotal} />
                             </div>
                         </div>
+
                         <button
                             className="btn btn--primary"
                             type="button"
+                            style={{ width: '100%' }}
                             disabled={checkout.isPending}
                             onClick={() => checkout.mutate()}
                         >
-                            {checkout.isPending ? 'Placing order…' : 'Checkout'}
+                            {checkout.isPending ? 'Processing…' : 'Checkout'}
                         </button>
-                        {checkout.error ? (
+
+                        {checkout.error && (
                             <InlineError title="Checkout failed" message={checkout.error.message} />
-                        ) : null}
+                        )}
+
+                        {checkout.isSuccess && (
+                            <div className="state" style={{ marginTop: 12, borderColor: 'rgba(52,211,153,0.2)', background: 'rgba(52,211,153,0.06)' }}>
+                                <div className="state__title" style={{ color: 'var(--success)' }}>Order placed! 🎉</div>
+                                <p className="state__msg">
+                                    <Link to="/orders" style={{ color: 'var(--accent)' }}>View your orders →</Link>
+                                </p>
+                            </div>
+                        )}
+
+                        <div style={{ marginTop: 12 }}>
+                            <button
+                                className="linkbtn"
+                                style={{ width: '100%', textAlign: 'center' }}
+                                type="button"
+                                onClick={() => cartActions.clear.mutate()}
+                            >
+                                Clear cart
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
         </div>
     )
 }
-
