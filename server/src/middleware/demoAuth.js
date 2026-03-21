@@ -24,4 +24,3 @@ function demoAuth(req, res, next) {
 }
 
 module.exports = { demoAuth };
-

@@ -53,13 +53,13 @@ async function listProducts({ q, limit = 24, skip = 0, category } = {}) {
     ...(category ? { category } : {}),
     ...(q
       ? {
-        OR: [
-          { title: { contains: q } },
-          { description: { contains: q } },
-          { category: { contains: q } },
-          { brand: { contains: q } },
-        ],
-      }
+          OR: [
+            { title: { contains: q } },
+            { description: { contains: q } },
+            { category: { contains: q } },
+            { brand: { contains: q } },
+          ],
+        }
       : {}),
   };
 

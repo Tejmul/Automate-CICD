@@ -101,17 +101,14 @@ router.delete(
   },
 );
 
-router.delete('/',
-  async (req, res, next) => {
-    try {
-      const user = await ensureUserByEmail(req.user);
-      await prisma.cartItem.deleteMany({ where: { userId: user.id } });
-      res.status(204).send();
-    } catch (e) {
-      next(e);
-    }
-  },
-);
+router.delete('/', async (req, res, next) => {
+  try {
+    const user = await ensureUserByEmail(req.user);
+    await prisma.cartItem.deleteMany({ where: { userId: user.id } });
+    res.status(204).send();
+  } catch (e) {
+    next(e);
+  }
+});
 
 module.exports = router;
-

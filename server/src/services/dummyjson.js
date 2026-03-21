@@ -49,7 +49,9 @@ async function listProductsByCategory({ category, limit = 24, skip = 0 } = {}) {
   const params = new URLSearchParams();
   params.set('limit', String(limit));
   params.set('skip', String(skip));
-  return dummyFetch(`/products/category/${encodeURIComponent(String(category))}?${params.toString()}`);
+  return dummyFetch(
+    `/products/category/${encodeURIComponent(String(category))}?${params.toString()}`,
+  );
 }
 
 async function getProduct(id) {

@@ -1,7 +1,11 @@
 function errorHandler(err, req, res, next) {
   void next;
   const statusCode =
-    typeof err.statusCode === 'number' ? err.statusCode : typeof err.status === 'number' ? err.status : 500;
+    typeof err.statusCode === 'number'
+      ? err.statusCode
+      : typeof err.status === 'number'
+        ? err.status
+        : 500;
 
   const payload = {
     status: 'error',
@@ -17,4 +21,3 @@ function errorHandler(err, req, res, next) {
 }
 
 module.exports = { errorHandler };
-

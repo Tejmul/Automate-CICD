@@ -7,4 +7,3 @@ async function ensureUserByEmail({ email, name }) {
 }
 
 module.exports = { ensureUserByEmail };
-

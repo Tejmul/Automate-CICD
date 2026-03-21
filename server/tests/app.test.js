@@ -171,7 +171,10 @@ describe('Cart API (demo-auth protected)', () => {
   });
 
   it('POST /api/cart adds an item', async () => {
-    const res = await request(app).post('/api/cart').set(DEMO_HEADERS).send({ productId: 101, quantity: 2 });
+    const res = await request(app)
+      .post('/api/cart')
+      .set(DEMO_HEADERS)
+      .send({ productId: 101, quantity: 2 });
     expect(res.statusCode).toEqual(201);
     expect(res.body).toHaveProperty('productId', 101);
     expect(res.body).toHaveProperty('quantity', 2);
