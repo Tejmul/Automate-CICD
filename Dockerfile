@@ -3,6 +3,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Native addon (better-sqlite3) needs a toolchain on Alpine
+RUN apk add --no-cache python3 make g++
+
 # Install server dependencies
 COPY server/package.json server/package-lock.json ./server/
 RUN cd server && npm ci --omit=dev
