@@ -19,7 +19,7 @@ async function main() {
       description: 'Seeded for automated browser tests.',
       price: 49.99,
       category: 'tops',
-      brand: 'ShopSmart',
+      brand: 'E2E Co',
       thumbnail: '',
       stock: 10,
     },
