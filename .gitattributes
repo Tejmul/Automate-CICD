@@ -1,0 +1,2 @@
+# Consistent line endings for Prettier + Linux CI
+client/src/** text eol=lf
