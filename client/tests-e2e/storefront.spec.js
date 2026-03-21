@@ -5,7 +5,7 @@ test("shop -> product -> add to cart", async ({ page }) => {
   await page.locator('.navbar__nav a[href="/shop"]').click();
 
   await expect(
-    page.getByRole("heading", { name: /prada-clean grid/i }),
+    page.getByRole("heading", { name: /discover premium products/i }),
   ).toBeVisible();
 
   const firstCard = page.locator(".pcard").first();
@@ -16,8 +16,9 @@ test("shop -> product -> add to cart", async ({ page }) => {
   ).toBeVisible();
   await page.getByRole("button", { name: /add to cart/i }).click();
 
-  await page.getByRole("link", { name: /cart/i }).click();
+  // Navbar opens cart drawer; footer has a /cart link — go directly for a stable assertion.
+  await page.goto("/cart");
   await expect(
-    page.getByRole("heading", { name: /mobile-first checkout/i }),
+    page.getByRole("heading", { name: /your shopping bag/i }),
   ).toBeVisible();
 });
