@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "prisma migrate deploy && jest",
+    "test": "prisma migrate deploy && prisma generate && jest",
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
