@@ -8,7 +8,9 @@ test("shop -> product -> add to cart", async ({ page }) => {
     page.getByRole("heading", { name: /discover premium products/i }),
   ).toBeVisible();
 
-  const firstCard = page.locator(".pcard").first();
+  // Catalog uses ProductCard links (`.product-card`), not legacy `.pcard` skeleton class.
+  const firstCard = page.locator("a.product-card").first();
+  await expect(firstCard).toBeVisible();
   await firstCard.click();
 
   await expect(

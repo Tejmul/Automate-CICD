@@ -19,7 +19,7 @@ export default defineConfig({
     ? [
         {
           command:
-            "npx prisma migrate deploy && npx prisma generate && node src/index.js",
+            "npx prisma migrate deploy && npx prisma generate && node src/scripts/seedE2eProducts.js && node src/index.js",
           cwd: serverRoot,
           url: "http://127.0.0.1:5001/api/health",
           reuseExistingServer: false,
