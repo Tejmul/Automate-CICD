@@ -1,4 +1,4 @@
-name: CI-CD Pipeline
+name: Deploy to EC2
 
 on:
   push:
@@ -6,20 +6,44 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Verify repository
+      - name: Setup SSH
         run: |
-          echo "Repository contents:"
-          ls -la
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' > ~/.ssh/github_actions
+          chmod 600 ~/.ssh/github_actions
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy
+      - name: Deploy to EC2
         run: |
-          echo "🚀 Deployment successful!"
-          echo "Deployed commit: $GITHUB_SHA"
-          echo "Time: $(date)"
+          ssh -i ~/.ssh/github_actions ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            cd ~/shopsmart
+            git pull origin main
+
+            # Backend
+            cd server
+            npm install
+            npx prisma migrate deploy
+            pm2 restart shopsmart-backend || pm2 start src/index.js --name shopsmart-backend
+
+            # Frontend
+            cd ../client
+            npm install
+            npm run build
+
+            sudo rm -rf /var/www/shopsmart/client/dist
+            sudo cp -r dist /var/www/shopsmart/client/
+
+            sudo systemctl restart nginx
+          EOF
+
+      - name: Health Check
+        run: |
+          sleep 5
+          curl -fsS "http://${{ secrets.EC2_HOST }}/api/health" || echo "⚠️ Health check failed — server may still be starting"

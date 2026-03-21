@@ -4,30 +4,18 @@ import { useCart, useCartWithProducts, useWishlist, useCartActions } from '../ho
 import { CartDrawer } from '../components/CartDrawer'
 import './Navbar.css'
 
-export function Navbar() {
-  const location = useLocation()
-  const { data: cartItems = [] } = useCart()
-  const { data: wishlistItems = [] } = useWishlist()
-  const cartActions = useCartActions()
-  const cartWithProducts = useCartWithProducts()
-
-  const [scrolled, setScrolled] = useState(false)
+function NavbarChrome({
+  location,
+  scrolled,
+  cartItems,
+  wishlistItems,
+  cartWithProducts,
+  cartActions,
+}) {
   const [cartOpen, setCartOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const searchRef = useRef(null)
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  useEffect(() => {
-    setMobileOpen(false)
-    setSearchOpen(false)
-    setCartOpen(false)
-  }, [location])
 
   useEffect(() => {
     if (searchOpen) searchRef.current?.focus()
@@ -149,3 +137,30 @@ export function Navbar() {
   )
 }
 
+export function Navbar() {
+  const location = useLocation()
+  const { data: cartItems = [] } = useCart()
+  const { data: wishlistItems = [] } = useWishlist()
+  const cartActions = useCartActions()
+  const cartWithProducts = useCartWithProducts()
+
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  return (
+    <NavbarChrome
+      key={location.pathname}
+      location={location}
+      scrolled={scrolled}
+      cartItems={cartItems}
+      wishlistItems={wishlistItems}
+      cartWithProducts={cartWithProducts}
+      cartActions={cartActions}
+    />
+  )
+}

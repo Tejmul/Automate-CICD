@@ -46,11 +46,30 @@ app.get('/api', (req, res) => {
   res.json({ name: 'ShopSmart API', status: 'ok' });
 });
 
-// Root Route
+// In production (Docker), serve the built client as static files
+const path = require('path');
+const publicDir = path.join(__dirname, '..', 'public');
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(publicDir));
+}
+
+// Root Route (dev fallback)
 app.get('/', (req, res) => {
-  res.send('ShopSmart Backend Service');
+  if (process.env.NODE_ENV === 'production') {
+    res.sendFile(path.join(publicDir, 'index.html'));
+  } else {
+    res.send('ShopSmart Backend Service');
+  }
 });
 
 app.use(errorHandler);
+
+// SPA fallback — serve index.html for unknown routes in production
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res) => {
+    res.sendFile(path.join(publicDir, 'index.html'));
+  });
+}
 
 module.exports = app;

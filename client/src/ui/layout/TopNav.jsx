@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useCart } from '../hooks/useStorefront'
 
 function NavItem({ to, children }) {
@@ -13,14 +13,9 @@ function NavItem({ to, children }) {
     )
 }
 
-export function TopNav() {
+function TopNavInner() {
     const { data: cartItems = [] } = useCart()
     const [menuOpen, setMenuOpen] = useState(false)
-
-    // Close menu on route change
-    useEffect(() => {
-        setMenuOpen(false)
-    }, [])
 
     const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
 
@@ -71,4 +66,9 @@ export function TopNav() {
             </div>
         </>
     )
+}
+
+export function TopNav() {
+    const location = useLocation()
+    return <TopNavInner key={location.pathname} />
 }

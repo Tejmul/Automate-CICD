@@ -1,0 +1,15 @@
+node_modules
+client/node_modules
+server/node_modules
+client/dist
+server/prisma/dev.db
+.git
+.github
+.gitignore
+*.md
+scripts
+tests-e2e
+client/tests-e2e
+server/tests
+.env
+.env.*

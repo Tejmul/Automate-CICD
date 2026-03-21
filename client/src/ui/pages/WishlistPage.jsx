@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useWishlistWithProducts, useWishlistActions, useCartActions } from '../hooks/useStorefront'
 import { EmptyState, InlineError, Skeleton } from '../components/State'
