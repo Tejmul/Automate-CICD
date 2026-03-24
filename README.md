@@ -1,6 +1,6 @@
 ## ShopSmart — DummyJSON Ecommerce (Fullstack + DevOps-ready)
 
-### What this is
+### What this is :
 - **Frontend**: React (Vite) + React Router + React Query, UI inspired by modern ecommerce patterns (Nike energy, Prada minimal grids, mobile-first pacing).
 - **Backend**: Express + Prisma (SQLite) with a clean API layer that proxies/consumes `dummyjson.com` for products and persists **cart / wishlist / orders**.
 - **DevOps**: CI (lint + unit tests + build), Dependabot, and bonus E2E Playwright flow.
