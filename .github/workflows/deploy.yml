@@ -1,4 +1,4 @@
-name: Deploy to EC2 (No Docker)
+name: Deploy to EC2 
 
 on:
   push:
@@ -10,19 +10,12 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Use repo on runner
-        run: |
-          if [ ! -d "$HOME/shopsmart/.git" ]; then
-            git clone https://github.com/Tejmul/Automate-CICD.git "$HOME/shopsmart"
-          fi
-          cd "$HOME/shopsmart"
-          git fetch origin
-          git checkout main
-          git pull origin main
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Deploy backend
         run: |
-          cd "$HOME/shopsmart/server"
+          cd "$GITHUB_WORKSPACE/server"
           npm ci
           npx prisma migrate deploy
           pm2 restart shopsmart-backend || pm2 start src/index.js --name shopsmart-backend
@@ -30,7 +23,7 @@ jobs:
 
       - name: Build frontend
         run: |
-          cd "$HOME/shopsmart/client"
+          cd "$GITHUB_WORKSPACE/client"
           npm ci
           npm run build
           sudo rm -rf /var/www/shopsmart/client/dist
