@@ -7,33 +7,44 @@ on:
 
 jobs:
   deploy:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Deploy backend
+      - name: Setup SSH
         run: |
-          cd "$GITHUB_WORKSPACE/server"
-          npm ci
-          npx prisma migrate deploy
-          pm2 restart shopsmart-backend || pm2 start src/index.js --name shopsmart-backend
-          pm2 save
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' > ~/.ssh/github_actions
+          chmod 600 ~/.ssh/github_actions
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Build frontend
+      - name: Deploy to EC2
         run: |
-          cd "$GITHUB_WORKSPACE/client"
-          npm ci
-          npm run build
-          sudo rm -rf /var/www/shopsmart/client/dist
-          sudo mkdir -p /var/www/shopsmart/client
-          sudo cp -r dist /var/www/shopsmart/client/
+          ssh -i ~/.ssh/github_actions "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
+            cd ~/Automate-CICD || cd ~/shopsmart
 
-      - name: Restart nginx
-        run: |
-          sudo systemctl restart nginx
+            git fetch origin
+            git checkout main
+            git pull origin main
+
+            cd server
+            npm ci
+            npx prisma migrate deploy
+            pm2 restart shopsmart-backend || pm2 start src/index.js --name shopsmart-backend
+            pm2 save
+
+            cd ../client
+            npm ci
+            npm run build
+
+            sudo rm -rf /var/www/shopsmart/client/dist
+            sudo mkdir -p /var/www/shopsmart/client
+            sudo cp -r dist /var/www/shopsmart/client/
+            sudo systemctl restart nginx
+          EOF
 
       - name: Health check
         run: |
-          curl -fsS http://127.0.0.1:5001/api/health
+          curl -fsS "http://${{ secrets.EC2_HOST }}/api/health"
