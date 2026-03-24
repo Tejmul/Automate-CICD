@@ -12,9 +12,7 @@ function delay(value) {
 }
 
 function categoriesList() {
-  const set = new Set(
-    FIXTURE_PRODUCTS.map((p) => p.category).filter(Boolean),
-  );
+  const set = new Set(FIXTURE_PRODUCTS.map((p) => p.category).filter(Boolean));
   return [...set].sort();
 }
 
@@ -103,11 +101,13 @@ export const fixtureApi = {
 
   cart: {
     get() {
-      const items = [...cartQuantities.entries()].map(([productId, quantity]) => ({
-        productId,
-        quantity,
-        id: `fixture-cart-${productId}`,
-      }));
+      const items = [...cartQuantities.entries()].map(
+        ([productId, quantity]) => ({
+          productId,
+          quantity,
+          id: `fixture-cart-${productId}`,
+        }),
+      );
       return delay({ items });
     },
 

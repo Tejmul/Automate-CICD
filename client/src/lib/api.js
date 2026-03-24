@@ -3,8 +3,7 @@ import { fixtureApi } from "./fixtureApi";
 
 /** Use in-memory fixture data (no HTTP). Vitest sets MODE=test → real apiFetch mapping tests. Set VITE_USE_API=true to talk to the backend. */
 const useFixture =
-  import.meta.env.MODE !== "test" &&
-  import.meta.env.VITE_USE_API !== "true";
+  import.meta.env.MODE !== "test" && import.meta.env.VITE_USE_API !== "true";
 
 function via(fnReal, fnMock) {
   return useFixture ? fnMock() : fnReal();
@@ -65,8 +64,7 @@ export const api = {
     },
     get(id) {
       return via(
-        () =>
-          apiFetch(`/api/products/${encodeURIComponent(String(id))}`),
+        () => apiFetch(`/api/products/${encodeURIComponent(String(id))}`),
         () => fixtureApi.products.get(id),
       );
     },
@@ -155,12 +153,9 @@ export const api = {
     remove(productId) {
       return via(
         () =>
-          apiFetch(
-            `/api/wishlist/${encodeURIComponent(String(productId))}`,
-            {
-              method: "DELETE",
-            },
-          ),
+          apiFetch(`/api/wishlist/${encodeURIComponent(String(productId))}`, {
+            method: "DELETE",
+          }),
         () => fixtureApi.wishlist.remove(productId),
       );
     },
@@ -180,8 +175,7 @@ export const api = {
     },
     get(id) {
       return via(
-        () =>
-          apiFetch(`/api/orders/${encodeURIComponent(String(id))}`),
+        () => apiFetch(`/api/orders/${encodeURIComponent(String(id))}`),
         () => fixtureApi.orders.get(id),
       );
     },
