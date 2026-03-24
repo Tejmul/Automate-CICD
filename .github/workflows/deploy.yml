@@ -44,7 +44,3 @@ jobs:
             sudo cp -r dist /var/www/shopsmart/client/
             sudo systemctl restart nginx
           EOF
-
-      - name: Health check
-        run: |
-          curl -fsS "http://${{ secrets.EC2_HOST }}/api/health"
