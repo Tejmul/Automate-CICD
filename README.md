@@ -75,4 +75,5 @@ npm run e2e
 ### Deployment notes (as required)
 - **Backend**: deploy to Render (configure env vars + run Prisma migrate if needed)
 - **Frontend**: deploy to Vercel (set `VITE_API_URL` to your Render backend URL)
-- **CORS**: ensure `ALLOWED_ORIGINS` includes your Vercel URL
+
+

@@ -51,7 +51,7 @@ export function Hero() {
             </div>
           </div>
           <div className="hero2__caption">
-            <div className="hero2__capTitle">Models wearing full outfits</div>
+            <div className="hero2__capTitle">Shop everything you need</div>
             <div className="hero2__capCta">Explore now</div>
           </div>
         </div>
