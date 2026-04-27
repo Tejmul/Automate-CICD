@@ -1,0 +1,9 @@
+# Copy this file to terraform.tfvars and fill in the values.
+# terraform.tfvars is git-ignored — never commit real credentials.
+
+aws_region       = "us-east-1"
+project_name     = "automate-cicd"
+environment      = "dev"       # dev | staging | prod
+force_destroy    = false
+kms_key_arn      = ""          # leave empty to use AES-256
+enable_lifecycle = false
