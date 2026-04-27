@@ -7,3 +7,6 @@ coverage
 .vercel
 *.db
 *.db-journal
+
+# Terraform local binary (install via brew or tfenv)
+terraform_bin
