@@ -100,6 +100,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "main" {
     id     = "transition-to-ia"
     status = "Enabled"
 
+    filter {}
+
     transition {
       days          = 30
       storage_class = "STANDARD_IA"
