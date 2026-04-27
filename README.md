@@ -77,4 +77,3 @@ npm run e2e
 
 - **Frontend**: deploy to Vercel (set `VITE_API_URL` to your Render backend URL)
 - Tejmul Movin
-
