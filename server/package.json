@@ -15,8 +15,8 @@
     "catalog:sync": "node src/scripts/syncCatalog.js"
   },
   "dependencies": {
-    "@prisma/adapter-better-sqlite3": "^7.7.0",
-    "@prisma/client": "^7.7.0",
+    "@prisma/adapter-better-sqlite3": "^7.8.0",
+    "@prisma/client": "^7.8.0",
     "better-sqlite3": "^12.9.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
@@ -25,13 +25,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "eslint": "^10.2.0",
+    "eslint": "^10.2.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-jest": "^29.15.2",
     "jest": "^30.3.0",
     "nodemon": "^3.1.14",
     "prettier": "^3.8.3",
-    "prisma": "^7.7.0",
+    "prisma": "^7.8.0",
     "supertest": "^7.2.2"
   }
 }
