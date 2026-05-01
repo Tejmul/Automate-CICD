@@ -1,32 +1,4 @@
 # ============================================================
-# Variables
-# ============================================================
-
-variable "project_name" {
-  description = "Project name used for resource naming"
-  type        = string
-  default     = "shopsmart"
-}
-
-variable "aws_region" {
-  description = "AWS region for ECS deployment"
-  type        = string
-  default     = "us-east-1"
-}
-
-variable "task_cpu" {
-  description = "Fargate task CPU units (256 = 0.25 vCPU)"
-  type        = string
-  default     = "256"
-}
-
-variable "task_memory" {
-  description = "Fargate task memory in MB"
-  type        = string
-  default     = "512"
-}
-
-# ============================================================
 # ECR Repository
 # ============================================================
 resource "aws_ecr_repository" "app" {
@@ -134,8 +106,7 @@ resource "aws_ecs_task_definition" "app" {
 
     environment = [
       { name = "NODE_ENV", value = "production" },
-      { name = "PORT", value = "5001" },
-      { name = "DATABASE_URL", value = "file:/data/prod.db" }
+      { name = "PORT", value = "5001" }
     ]
 
     healthCheck = {

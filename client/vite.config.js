@@ -18,5 +18,6 @@ export default defineConfig({
     setupFiles: "./src/setupTests.js",
     include: ["src/**/*.test.{js,jsx}"],
     exclude: ["tests-e2e/**", "node_modules/**", "dist/**"],
+    reporters: ["default", ["junit", { outputFile: "test-results/vitest-junit.xml" }]],
   },
 });

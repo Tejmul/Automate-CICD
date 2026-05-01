@@ -2,7 +2,7 @@ const js = require('@eslint/js');
 
 module.exports = [
   {
-    ignores: ['node_modules/**', 'coverage/**', 'prisma.config.ts'],
+    ignores: ['node_modules/**', 'coverage/**'],
   },
   js.configs.recommended,
   {

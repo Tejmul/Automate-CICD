@@ -43,3 +43,17 @@ variable "enable_lifecycle" {
   type        = bool
   default     = false
 }
+
+# ── ECS / Fargate ───────────────────────────────────────────────────────────
+
+variable "task_cpu" {
+  description = "Fargate task CPU units (256 = 0.25 vCPU)"
+  type        = string
+  default     = "256"
+}
+
+variable "task_memory" {
+  description = "Fargate task memory in MB"
+  type        = string
+  default     = "512"
+}

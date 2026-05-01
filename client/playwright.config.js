@@ -18,8 +18,7 @@ export default defineConfig({
   webServer: process.env.CI
     ? [
         {
-          command:
-            "npx prisma migrate deploy && npx prisma generate && node src/scripts/seedE2eProducts.js && node src/index.js",
+          command: "node src/index.js",
           cwd: serverRoot,
           url: "http://127.0.0.1:5001/api/health",
           reuseExistingServer: false,
@@ -28,7 +27,6 @@ export default defineConfig({
             ...process.env,
             NODE_ENV: "test",
             PORT: "5001",
-            DATABASE_URL: "file:./dev.db",
             ALLOWED_ORIGINS: "http://127.0.0.1:5173",
           },
         },

@@ -4,6 +4,8 @@ node_modules
 dist
 build
 coverage
+server/reports
+client/test-results
 .vercel
 *.db
 *.db-journal

@@ -1,46 +1,177 @@
-name: Deploy to EC2 
+# Rubric order: Push / PR → Tests → Terraform Apply → Docker Build & Push → ECS
+#
+# GitHub Secrets (Settings → Secrets and variables → Actions):
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN (optional for long-lived keys), AWS_REGION
+#
+# Pull requests: Phase 1 (tests + reports) only.
+# Push to main: full pipeline including Terraform apply and ECS deployment.
+
+name: CI/CD — Test, Terraform, ECS
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
+  test:
+    name: Phase 1 — Tests & reports
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup SSH
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Server — install & test (unit + integration)
+        working-directory: server
+        env:
+          JEST_JUNIT_OUTPUT_DIR: reports
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' > ~/.ssh/github_actions
-          chmod 600 ~/.ssh/github_actions
-          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+          npm ci
+          npm run test:ci
 
-      - name: Deploy to EC2
+      - name: Setup Node.js (client)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Client — install & unit tests
+        working-directory: client
         run: |
-          ssh -i ~/.ssh/github_actions "${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}" << 'EOF'
-            cd ~/Automate-CICD || cd ~/shopsmart
+          npm ci
+          mkdir -p test-results
+          npm run test:ci
 
-            git fetch origin
-            git checkout main
-            git pull origin main
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-reports
+          if-no-files-found: ignore
+          path: |
+            server/reports/junit.xml
+            server/coverage/lcov.info
+            client/test-results/*.xml
 
-            cd server
-            npm ci
-            npx prisma migrate deploy
-            pm2 restart shopsmart-backend || pm2 start src/index.js --name shopsmart-backend
-            pm2 save
+  terraform:
+    name: Phase 2 — Terraform
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    env:
+      TF_IN_AUTOMATION: true
+      TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+    outputs:
+      ecr_repository_url: ${{ steps.outputs.outputs.ecr_repository_url }}
+      ecs_cluster_name: ${{ steps.outputs.outputs.ecs_cluster_name }}
+      ecs_service_name: ${{ steps.outputs.outputs.ecs_service_name }}
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            cd ../client
-            npm ci
-            npm run build
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-            sudo rm -rf /var/www/shopsmart/client/dist
-            sudo mkdir -p /var/www/shopsmart/client
-            sudo cp -r dist /var/www/shopsmart/client/
-            sudo systemctl restart nginx
-          EOF
+      - name: Cache Terraform state
+        uses: actions/cache@v4
+        id: tfstate
+        with:
+          path: terraform/terraform.tfstate
+          key: tfstate-${{ github.repository }}-v1-${{ github.ref_name }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+          terraform_wrapper: false
+
+      - name: Terraform fmt (check)
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform validate
+        run: terraform validate -no-color
+
+      - name: Terraform plan
+        run: terraform plan -input=false -no-color -out=tfplan
+
+      - name: Terraform apply
+        run: terraform apply -input=false -auto-approve tfplan
+
+      - name: Export outputs for deploy
+        id: outputs
+        run: |
+          echo "ecr_repository_url=$(terraform output -raw ecr_repository_url)" >> "$GITHUB_OUTPUT"
+          echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> "$GITHUB_OUTPUT"
+          echo "ecs_service_name=$(terraform output -raw ecs_service_name)" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Phase 3 — Docker, ECR, ECS Fargate
+    runs-on: ubuntu-latest
+    needs: [terraform]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      ECR_REGISTRY: ${{ needs.terraform.outputs.ecr_repository_url }}
+      ECS_CLUSTER: ${{ needs.terraform.outputs.ecs_cluster_name }}
+      ECS_SERVICE: ${{ needs.terraform.outputs.ecs_service_name }}
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        run: |
+          docker build -t "$ECR_REGISTRY:$IMAGE_TAG" -t "$ECR_REGISTRY:latest" .
+          docker push "$ECR_REGISTRY:$IMAGE_TAG"
+          docker push "$ECR_REGISTRY:latest"
+
+      - name: Deploy to ECS Fargate
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment \
+            --region "$AWS_REGION"
+
+      - name: Verify service is stable
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_REGION"
