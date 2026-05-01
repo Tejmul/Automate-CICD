@@ -35,7 +35,29 @@ services:
       server:
         condition: service_healthy
 
+  server_prod:
+    profiles: ["prod"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    ports:
+      - "5001:5001"
+    environment:
+      PORT: "5001"
+      NODE_ENV: production
+      DATABASE_URL: "file:/data/prod.db"
+      ALLOWED_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
+    volumes:
+      - server_prod_sqlite:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 volumes:
   server_node_modules:
   client_node_modules:
   server_sqlite:
+  server_prod_sqlite:
