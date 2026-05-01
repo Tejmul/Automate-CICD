@@ -63,7 +63,6 @@ npm run lint
 npm test -- --run
 npm run build
 ```
-
 Bonus E2E (requires Playwright browsers):
 
 ```bash
