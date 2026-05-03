@@ -20,8 +20,14 @@
   "jest": {
     "testEnvironment": "node",
     "coverageDirectory": "coverage",
-    "coverageReporters": ["text", "lcov"],
-    "collectCoverageFrom": ["src/**/*.js", "!src/index.js"]
+    "coverageReporters": [
+      "text",
+      "lcov"
+    ],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/index.js"
+    ]
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
