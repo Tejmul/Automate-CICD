@@ -1,3 +1,10 @@
+# Rubric: Push/PR → Tests → Terraform Apply → Docker Build & Push → ECS Fargate
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, AWS_REGION
+#
+# PR / fork: Phase 1 only. Push to main (or workflow_dispatch on main): full pipeline.
+
 name: CI/CD Pipeline
 
 on:
@@ -5,17 +12,19 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REPOSITORY: shopsmart-repo
-  ECS_CLUSTER: shopsmart-cluster
-  ECS_SERVICE: shopsmart-service
+  AWS_REGION: ${{ secrets.AWS_REGION != '' && secrets.AWS_REGION || 'us-east-1' }}
 
 jobs:
-  # Phase 1: Testing
-  test-server:
-    name: Server Tests
+  # ── Phase 1 — Testing (unit + integration + reports) ─────────────────────
+  test:
+    name: Phase 1 — Tests & reports
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,27 +35,15 @@ jobs:
           cache: npm
           cache-dependency-path: server/package-lock.json
 
-      - name: Install dependencies
-        run: cd server && npm ci
-
-      - name: Run linter
-        run: cd server && npm run lint
-
-      - name: Run tests
-        run: cd server && npm test -- --ci --coverage 2>&1 | tee test-results.txt
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: server-test-results
-          path: server/test-results.txt
-
-  test-client:
-    name: Client Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      - name: Server — lint, format, tests
+        working-directory: server
+        env:
+          JEST_JUNIT_OUTPUT_DIR: reports
+        run: |
+          npm ci
+          npm run lint
+          npm run format:check
+          npm run test:ci
 
       - uses: actions/setup-node@v4
         with:
@@ -54,38 +51,49 @@ jobs:
           cache: npm
           cache-dependency-path: client/package-lock.json
 
-      - name: Install dependencies
-        run: cd client && npm ci
+      - name: Client — lint, format, tests, build
+        working-directory: client
+        run: |
+          npm ci
+          npm run lint
+          npm run format:check
+          mkdir -p test-results
+          npm run test:ci
+          npm run build
 
-      - name: Run linter
-        run: cd client && npm run lint
-
-      - name: Run tests
-        run: cd client && npm test -- --run 2>&1 | tee test-results.txt
-
-      - name: Build
-        run: cd client && npm run build
-
-      - name: Upload test results
+      - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: client-test-results
-          path: client/test-results.txt
+          name: test-reports
+          if-no-files-found: ignore
+          path: |
+            server/reports/junit.xml
+            server/coverage/lcov.info
+            client/test-results/*.xml
 
-  # Phase 2: Infrastructure Provisioning (Terraform)
+  # ── Phase 2 — Terraform (S3 rubric + ECS infra) ─────────────────────────────
   terraform:
-    name: Terraform Apply
-    needs: [test-server, test-client]
+    name: Phase 2 — Terraform init / validate / plan / apply
+    needs: [test]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    env:
+      TF_IN_AUTOMATION: true
+      TF_VAR_aws_region: ${{ env.AWS_REGION }}
     outputs:
-      ecr_url: ${{ steps.tf-output.outputs.ecr_url }}
+      ecr_repository_url: ${{ steps.tf-output.outputs.ecr_repository_url }}
+      ecs_cluster_name: ${{ steps.tf-output.outputs.ecs_cluster_name }}
+      ecs_service_name: ${{ steps.tf-output.outputs.ecs_service_name }}
+    defaults:
+      run:
+        working-directory: terraform
     steps:
       - uses: actions/checkout@v4
 
       - uses: hashicorp/setup-terraform@v3
         with:
+          terraform_version: "1.9.0"
           terraform_wrapper: false
 
       - name: Configure AWS credentials
@@ -94,31 +102,42 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init
-        run: cd terraform && terraform init -input=false
+      - name: Cache Terraform state
+        uses: actions/cache@v4
+        with:
+          path: terraform/terraform.tfstate
+          key: tfstate-${{ github.repository }}-v1-${{ github.ref_name }}
 
-      - name: Terraform Validate
-        run: cd terraform && terraform validate
+      - name: Terraform fmt (check)
+        run: terraform fmt -check -recursive
 
-      - name: Terraform Plan
-        run: cd terraform && terraform plan -out=tfplan
+      - name: Terraform init
+        run: terraform init -input=false
 
-      - name: Terraform Apply
-        run: cd terraform && terraform apply -auto-approve tfplan
+      - name: Terraform validate
+        run: terraform validate -no-color
 
-      - name: Get Terraform outputs
+      - name: Terraform plan
+        run: terraform plan -input=false -no-color -out=tfplan
+
+      - name: Terraform apply
+        run: terraform apply -input=false -auto-approve tfplan
+
+      - name: Terraform outputs
         id: tf-output
         run: |
-          cd terraform
-          echo "ecr_url=$(terraform output -raw ecr_repository_url)" >> "$GITHUB_OUTPUT"
+          echo "ecr_repository_url=$(terraform output -raw ecr_repository_url)" >> "$GITHUB_OUTPUT"
+          echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> "$GITHUB_OUTPUT"
+          echo "ecs_service_name=$(terraform output -raw ecs_service_name)" >> "$GITHUB_OUTPUT"
 
-  # Phase 3: Docker Build & Push to ECR
+  # ── Phase 3 — Docker, ECR, ECS Fargate ────────────────────────────────────
   docker-build-push:
-    name: Build & Push to ECR
+    name: Phase 3a — Build & push image
     needs: [terraform]
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     steps:
       - uses: actions/checkout@v4
 
@@ -128,26 +147,28 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, tag, and push Docker image
+      - name: Build, tag, and push
         env:
-          ECR_URL: ${{ needs.terraform.outputs.ecr_url }}
+          ECR_URL: ${{ needs.terraform.outputs.ecr_repository_url }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_URL:$IMAGE_TAG -t $ECR_URL:latest .
-          docker push $ECR_URL:$IMAGE_TAG
-          docker push $ECR_URL:latest
+          docker build -t "$ECR_URL:$IMAGE_TAG" -t "$ECR_URL:latest" .
+          docker push "$ECR_URL:$IMAGE_TAG"
+          docker push "$ECR_URL:latest"
 
-  # Phase 3 (cont): Deploy to ECS Fargate
   deploy-ecs:
-    name: Deploy to ECS Fargate
-    needs: [docker-build-push]
+    name: Phase 3b — Deploy to ECS & verify
+    needs: [terraform, docker-build-push]
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    env:
+      ECS_CLUSTER: ${{ needs.terraform.outputs.ecs_cluster_name }}
+      ECS_SERVICE: ${{ needs.terraform.outputs.ecs_service_name }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -155,40 +176,37 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Force new ECS deployment
         run: |
           aws ecs update-service \
-            --cluster $ECS_CLUSTER \
-            --service $ECS_SERVICE \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
             --force-new-deployment \
-            --region $AWS_REGION
+            --region "$AWS_REGION"
 
       - name: Wait for service stability
         run: |
-          echo "Waiting for ECS service to stabilize..."
           aws ecs wait services-stable \
-            --cluster $ECS_CLUSTER \
-            --services $ECS_SERVICE \
-            --region $AWS_REGION
-          echo "ECS service is stable and running!"
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_REGION"
 
-      - name: Verify deployment
+      - name: Verify running task
         run: |
           TASK_ARN=$(aws ecs list-tasks \
-            --cluster $ECS_CLUSTER \
-            --service-name $ECS_SERVICE \
+            --cluster "$ECS_CLUSTER" \
+            --service-name "$ECS_SERVICE" \
             --query 'taskArns[0]' \
             --output text \
-            --region $AWS_REGION)
+            --region "$AWS_REGION")
 
           echo "Running task: $TASK_ARN"
 
           aws ecs describe-tasks \
-            --cluster $ECS_CLUSTER \
-            --tasks $TASK_ARN \
-            --query 'tasks[0].{status:lastStatus, health:healthStatus, startedAt:startedAt}' \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --query 'tasks[0].{status:lastStatus,health:healthStatus,startedAt:startedAt}' \
             --output table \
-            --region $AWS_REGION
-
+            --region "$AWS_REGION"

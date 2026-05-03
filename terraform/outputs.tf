@@ -26,4 +26,5 @@ output "versioning_status" {
 output "encryption_algorithm" {
   description = "SSE algorithm applied to the bucket"
   value       = tolist(aws_s3_bucket_server_side_encryption_configuration.main.rule)[0].apply_server_side_encryption_by_default[0].sse_algorithm
+  sensitive   = true
 }
