@@ -159,13 +159,23 @@ jobs:
 
       - name: Build, tag, and push
         env:
-          ECR_URL: ${{ needs.terraform.outputs.ecr_repository_url }}
+          ECR_URL_FROM_TF: ${{ needs.terraform.outputs.ecr_repository_url }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          if [ -z "$ECR_URL" ]; then
-            echo "::error::ECR_URL is empty. Check that Terraform output 'ecr_repository_url' has a value."
+          # Use Terraform output, or fallback to AWS CLI query
+          if [ -n "$ECR_URL_FROM_TF" ]; then
+            ECR_URL="$ECR_URL_FROM_TF"
+          else
+            echo "::warning::Terraform output empty, querying AWS directly"
+            ECR_URL=$(aws ecr describe-repositories --repository-names automate-cicd-repo --query 'repositories[0].repositoryUri' --output text)
+          fi
+          
+          if [ -z "$ECR_URL" ] || [ "$ECR_URL" = "None" ]; then
+            echo "::error::Could not determine ECR_URL"
             exit 1
           fi
+          
+          echo "Using ECR_URL: $ECR_URL"
           docker build -t "$ECR_URL:$IMAGE_TAG" -t "$ECR_URL:latest" .
           docker push "$ECR_URL:$IMAGE_TAG"
           docker push "$ECR_URL:latest"
