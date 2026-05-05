@@ -216,9 +216,16 @@ locals {
 }
 
 # ============================================================
-# ECS Service (Fargate)
+# ECS Service (Fargate) - use existing if AWS Academy
 # ============================================================
+data "aws_ecs_service" "existing" {
+  count        = var.use_aws_academy ? 1 : 0
+  service_name = "${var.project_name}-service"
+  cluster_arn  = aws_ecs_cluster.main.arn
+}
+
 resource "aws_ecs_service" "app" {
+  count           = var.use_aws_academy ? 0 : 1
   name            = "${var.project_name}-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.app.arn
@@ -238,6 +245,10 @@ resource "aws_ecs_service" "app" {
   }
 }
 
+locals {
+  ecs_service_name = var.use_aws_academy ? data.aws_ecs_service.existing[0].service_name : aws_ecs_service.app[0].name
+}
+
 # ============================================================
 # Outputs
 # ============================================================
@@ -253,5 +264,5 @@ output "ecs_cluster_name" {
 
 output "ecs_service_name" {
   description = "ECS service name"
-  value       = aws_ecs_service.app.name
+  value       = local.ecs_service_name
 }
