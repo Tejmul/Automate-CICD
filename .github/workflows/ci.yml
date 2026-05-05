@@ -154,6 +154,10 @@ jobs:
           ECR_URL: ${{ needs.terraform.outputs.ecr_repository_url }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          if [ -z "$ECR_URL" ]; then
+            echo "::error::ECR_URL is empty. Check that Terraform output 'ecr_repository_url' has a value."
+            exit 1
+          fi
           docker build -t "$ECR_URL:$IMAGE_TAG" -t "$ECR_URL:latest" .
           docker push "$ECR_URL:$IMAGE_TAG"
           docker push "$ECR_URL:latest"
