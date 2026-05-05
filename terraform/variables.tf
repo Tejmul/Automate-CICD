@@ -63,7 +63,7 @@ variable "task_memory" {
 variable "use_aws_academy" {
   description = "Set to true when using AWS Academy (uses LabRole instead of creating IAM roles)"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "lab_role_arn" {
