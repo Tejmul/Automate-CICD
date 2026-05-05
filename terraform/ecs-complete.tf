@@ -1,7 +1,13 @@
 # ============================================================
-# ECR Repository
+# ECR Repository (use existing if AWS Academy)
 # ============================================================
+data "aws_ecr_repository" "existing" {
+  count = var.use_aws_academy ? 1 : 0
+  name  = "${var.project_name}-repo"
+}
+
 resource "aws_ecr_repository" "app" {
+  count                = var.use_aws_academy ? 0 : 1
   name                 = "${var.project_name}-repo"
   image_tag_mutability = "MUTABLE"
   force_delete         = true
@@ -15,9 +21,15 @@ resource "aws_ecr_repository" "app" {
   }
 }
 
-# Lifecycle policy — keep only last 5 images
+locals {
+  ecr_repository_url  = var.use_aws_academy ? data.aws_ecr_repository.existing[0].repository_url : aws_ecr_repository.app[0].repository_url
+  ecr_repository_name = var.use_aws_academy ? data.aws_ecr_repository.existing[0].name : aws_ecr_repository.app[0].name
+}
+
+# Lifecycle policy — keep only last 5 images (skip for AWS Academy)
 resource "aws_ecr_lifecycle_policy" "app" {
-  repository = aws_ecr_repository.app.name
+  count      = var.use_aws_academy ? 0 : 1
+  repository = local.ecr_repository_name
 
   policy = jsonencode({
     rules = [{
@@ -47,9 +59,15 @@ resource "aws_ecs_cluster" "main" {
 }
 
 # ============================================================
-# CloudWatch Log Group for ECS tasks
+# CloudWatch Log Group for ECS tasks (use existing if AWS Academy)
 # ============================================================
+data "aws_cloudwatch_log_group" "existing" {
+  count = var.use_aws_academy ? 1 : 0
+  name  = "/ecs/${var.project_name}"
+}
+
 resource "aws_cloudwatch_log_group" "ecs" {
+  count             = var.use_aws_academy ? 0 : 1
   name              = "/ecs/${var.project_name}"
   retention_in_days = 7
 
@@ -58,11 +76,23 @@ resource "aws_cloudwatch_log_group" "ecs" {
   }
 }
 
+locals {
+  cloudwatch_log_group_name = var.use_aws_academy ? data.aws_cloudwatch_log_group.existing[0].name : aws_cloudwatch_log_group.ecs[0].name
+}
+
 # ============================================================
-# IAM — Task Execution Role (lets ECS pull images + write logs)
+# IAM — Use LabRole for AWS Academy, create role otherwise
 # ============================================================
+data "aws_caller_identity" "current" {}
+
+locals {
+  lab_role_arn       = var.lab_role_arn != "" ? var.lab_role_arn : "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/LabRole"
+  execution_role_arn = var.use_aws_academy ? local.lab_role_arn : aws_iam_role.ecs_task_execution[0].arn
+}
+
 resource "aws_iam_role" "ecs_task_execution" {
-  name = "${var.project_name}-ecs-exec-role"
+  count = var.use_aws_academy ? 0 : 1
+  name  = "${var.project_name}-ecs-exec-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -79,7 +109,8 @@ resource "aws_iam_role" "ecs_task_execution" {
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
-  role       = aws_iam_role.ecs_task_execution.name
+  count      = var.use_aws_academy ? 0 : 1
+  role       = aws_iam_role.ecs_task_execution[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
@@ -92,11 +123,11 @@ resource "aws_ecs_task_definition" "app" {
   network_mode             = "awsvpc"
   cpu                      = var.task_cpu
   memory                   = var.task_memory
-  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+  execution_role_arn       = local.execution_role_arn
 
   container_definitions = jsonencode([{
     name      = "${var.project_name}-container"
-    image     = "${aws_ecr_repository.app.repository_url}:latest"
+    image     = "${local.ecr_repository_url}:latest"
     essential = true
 
     portMappings = [{
@@ -120,7 +151,7 @@ resource "aws_ecs_task_definition" "app" {
     logConfiguration = {
       logDriver = "awslogs"
       options = {
-        "awslogs-group"         = aws_cloudwatch_log_group.ecs.name
+        "awslogs-group"         = local.cloudwatch_log_group_name
         "awslogs-region"        = var.aws_region
         "awslogs-stream-prefix" = "ecs"
       }
@@ -149,7 +180,14 @@ data "aws_subnets" "default" {
 # ============================================================
 # Security Group — allow inbound on 5001 + all outbound
 # ============================================================
+data "aws_security_group" "existing" {
+  count  = var.use_aws_academy ? 1 : 0
+  name   = "${var.project_name}-ecs-sg"
+  vpc_id = data.aws_vpc.default.id
+}
+
 resource "aws_security_group" "ecs_service" {
+  count       = var.use_aws_academy ? 0 : 1
   name        = "${var.project_name}-ecs-sg"
   description = "Allow inbound traffic on port 5001"
   vpc_id      = data.aws_vpc.default.id
@@ -173,6 +211,10 @@ resource "aws_security_group" "ecs_service" {
   }
 }
 
+locals {
+  security_group_id = var.use_aws_academy ? data.aws_security_group.existing[0].id : aws_security_group.ecs_service[0].id
+}
+
 # ============================================================
 # ECS Service (Fargate)
 # ============================================================
@@ -185,7 +227,7 @@ resource "aws_ecs_service" "app" {
 
   network_configuration {
     subnets          = data.aws_subnets.default.ids
-    security_groups  = [aws_security_group.ecs_service.id]
+    security_groups  = [local.security_group_id]
     assign_public_ip = true
   }
 
@@ -201,7 +243,7 @@ resource "aws_ecs_service" "app" {
 # ============================================================
 output "ecr_repository_url" {
   description = "ECR repository URL for docker push"
-  value       = aws_ecr_repository.app.repository_url
+  value       = local.ecr_repository_url
 }
 
 output "ecs_cluster_name" {

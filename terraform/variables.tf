@@ -57,3 +57,17 @@ variable "task_memory" {
   type        = string
   default     = "512"
 }
+
+# ── AWS Academy ─────────────────────────────────────────────────────────────
+
+variable "use_aws_academy" {
+  description = "Set to true when using AWS Academy (uses LabRole instead of creating IAM roles)"
+  type        = bool
+  default     = true
+}
+
+variable "lab_role_arn" {
+  description = "ARN of the AWS Academy LabRole (required when use_aws_academy=true)"
+  type        = string
+  default     = ""
+}
