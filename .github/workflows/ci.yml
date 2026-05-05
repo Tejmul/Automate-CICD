@@ -105,7 +105,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: terraform/terraform.tfstate
-          key: tfstate-${{ github.repository }}-v1-${{ github.ref_name }}
+          key: tfstate-${{ github.repository }}-v2-${{ github.ref_name }}
 
       - name: Terraform fmt (check)
         run: terraform fmt -check -recursive
@@ -125,7 +125,15 @@ jobs:
       - name: Terraform outputs
         id: tf-output
         run: |
-          echo "ecr_repository_url=$(terraform output -raw ecr_repository_url)" >> "$GITHUB_OUTPUT"
+          echo "=== All Terraform outputs ==="
+          terraform output
+          echo "=== Setting outputs ==="
+          ECR_URL=$(terraform output -raw ecr_repository_url 2>/dev/null || echo "")
+          if [ -z "$ECR_URL" ]; then
+            echo "::error::Terraform output 'ecr_repository_url' is empty"
+            exit 1
+          fi
+          echo "ecr_repository_url=$ECR_URL" >> "$GITHUB_OUTPUT"
           echo "ecs_cluster_name=$(terraform output -raw ecs_cluster_name)" >> "$GITHUB_OUTPUT"
           echo "ecs_service_name=$(terraform output -raw ecs_service_name)" >> "$GITHUB_OUTPUT"
 
